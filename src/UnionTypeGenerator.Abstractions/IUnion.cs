@@ -6,6 +6,7 @@ namespace UnionTypeGenerator
 
     public interface IUnion<T> : IBaseUnion
     {
+        public bool IsT { get; }
     }
 
     public interface IUnion<T, TError> : IUnion<T>
