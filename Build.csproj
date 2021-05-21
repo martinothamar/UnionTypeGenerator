@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.Build.Traversal/2.0.24">
+  <ItemGroup>
+    <ProjectReference Include="src/UnionTypeGenerator/UnionTypeGenerator.csproj" />
+    <ProjectReference Include="src/UnionTypeGenerator.Abstractions/UnionTypeGenerator.Abstractions.csproj" />
+    <ProjectReference Include="test/UnionTypeGenerator.Tests/UnionTypeGenerator.Tests.csproj" />
+  </ItemGroup>
+</Project>
