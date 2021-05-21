@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Scriban;
@@ -19,10 +20,7 @@ namespace UnionTypeGenerator
 
             var resultModels = new List<TemplatingModel>();
 
-            var resultTypes = new[]
-            {
-                compilation.GetTypeByMetadataName($"UnionTypeGenerator.IUnion`2")!,
-            };
+            var resultTypes = Enumerable.Range(2, 4).Select(n => compilation.GetTypeByMetadataName($"UnionTypeGenerator.IUnion`{n}")!);
 
             foreach (var tree in compilation.SyntaxTrees)
             {
@@ -48,7 +46,7 @@ namespace UnionTypeGenerator
                     if (resultInterfaceSymbol is null)
                         continue;
 
-                    resultModels.Add(new TemplatingModel(structSymbol, resultInterfaceSymbol));
+                    resultModels.Add(new TemplatingModel(structSymbol, resultInterfaceSymbol, compilation));
                 }
             }
 
@@ -59,8 +57,6 @@ namespace UnionTypeGenerator
             {
                 var output = template.Render(resultModel, member => member.Name);
 
-                //System.Diagnostics.Debugger.Launch();
-
                 context.AddSource($"Union_{resultModel.Name}.g.cs", SourceText.From(output, Encoding.UTF8));
             }
         }
@@ -70,51 +66,57 @@ namespace UnionTypeGenerator
             public readonly INamedTypeSymbol Concrete;
             public readonly INamedTypeSymbol Interface;
 
+            public readonly bool AllowUnsafeIsOn;
+
             public string Namespace =>
                 Concrete.ContainingNamespace.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat);
 
             public string InterfaceName =>
                 Interface.GetTypeSymbolFullName();
 
-            public string ValueTypeName =>
-                Interface.TypeArguments[0].GetTypeSymbolFullName();
-
             public string Name => Concrete.Name;
 
-            public IEnumerable<Error> Errors
+            public IEnumerable<UnionType> UnionTypes
             {
                 get
                 {
-                    var errorTypeSymbols = Interface.TypeArguments;
+                    var typeSymbols = Interface.TypeArguments;
 
-                    for (int i = 1; i < errorTypeSymbols.Length; i++)
+                    for (int i = 0; i < typeSymbols.Length; i++)
                     {
-                        var errorTypeSymbol = errorTypeSymbols[i];
+                        var typeSymbol = typeSymbols[i];
 
-                        var typeName = errorTypeSymbol.GetTypeSymbolFullName();
+                        var typeName = typeSymbol.GetTypeSymbolFullName();
                         var tag = i + 1;
-                        var fieldName = "_tError" + i;
-                        yield return new Error(typeName, fieldName, tag);
+                        var fieldName = $"_t{tag - 1}Value";
+                        var comma = i < typeSymbols.Length - 1 ? "," : "";
+                        yield return new UnionType(typeName, fieldName, comma, tag);
                     }
                 }
             }
 
-            public TemplatingModel(INamedTypeSymbol concrete, INamedTypeSymbol @interface)
+            public TemplatingModel(INamedTypeSymbol concrete, INamedTypeSymbol @interface, Compilation compilation)
             {
                 Concrete = concrete;
                 Interface = @interface;
+                AllowUnsafeIsOn = compilation.Options is CSharpCompilationOptions csharpOptions &&
+                    csharpOptions.AllowUnsafe;
             }
 
-            public sealed class Error
+            public sealed class UnionType
             {
                 public readonly string TypeName;
                 public readonly string FieldName;
+                public readonly string Comma;
                 public readonly int Tag;
 
-                public Error(string typeName, string fieldName, int tag)
+                public int TypeArgumentIndex => Tag - 1;
+
+                public UnionType(string typeName, string fieldName, string comma, int tag)
                 {
                     TypeName = typeName;
                     FieldName = fieldName;
+                    Comma = comma;
                     Tag = tag;
                 }
             }
