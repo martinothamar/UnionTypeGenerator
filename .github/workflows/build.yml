@@ -23,7 +23,8 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 5.0.x
+        dotnet-version: '6.0.x'
+        include-prerelease: true
 
     - name: Restore dependencies
       run: dotnet restore Build.csproj
@@ -37,8 +38,8 @@ jobs:
     - name: Pack
       if: ${{ success() && !github.base_ref }}
       run: |
-        dotnet pack src/UntionTypeGenerator/UntionTypeGenerator.csproj --no-build --verbosity normal -c Release -o artifacts/ && \
-        dotnet pack src/UntionTypeGenerator.Abstractions/UntionTypeGenerator.Abstractions.csproj --no-build --verbosity normal -c Release -o artifacts/
+        dotnet pack src/UnionTypeGenerator/UnionTypeGenerator.csproj --no-build --verbosity normal -c Release -o artifacts/ && \
+        dotnet pack src/UnionTypeGenerator.Abstractions/UnionTypeGenerator.Abstractions.csproj --no-build --verbosity normal -c Release -o artifacts/
 
     - name: Push to NuGet
       if: ${{ success() && !github.base_ref }}
